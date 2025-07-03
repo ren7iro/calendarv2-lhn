@@ -1,4 +1,3 @@
-
 const csvURL = 'calendar_lhn_flattened.csv';
 
 function formatTime(date) {
@@ -11,20 +10,18 @@ function parseTime(dateStr, timeStr) {
   return new Date(year, month - 1, day, hour, minute);
 }
 
-async function fetchEvents() {
+async function fetchEvents(selected = "today") {
   const res = await fetch(csvURL);
   const text = await res.text();
   const rows = text.trim().split("\n").map(r => r.split(','));
-  rows.shift();
+  rows.shift(); // remove header
 
   const now = new Date();
+  const todayStr = now.toISOString().split("T")[0];
   const container = document.getElementById("eventContainer");
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-  const todayStr = now.toISOString().split("T")[0];
   document.getElementById("dayTitle").textContent = dayName;
   container.innerHTML = "";
-
-  const selected = document.getElementById("dayFilter")?.value || "today";
 
   const events = rows.map(([title, date, start, end]) => {
     return {
@@ -103,5 +100,12 @@ async function fetchEvents() {
   });
 }
 
-document.getElementById("dayFilter").addEventListener("change", fetchEvents);
-fetchEvents();
+// Wait for DOM and set up filter listener
+window.addEventListener("DOMContentLoaded", () => {
+  const filter = document.getElementById("dayFilter");
+  filter.addEventListener("change", () => {
+    fetchEvents(filter.value);
+  });
+
+  fetchEvents(filter.value); // initial load
+});
