@@ -18,11 +18,13 @@ async function fetchEvents() {
   rows.shift();
 
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
   const container = document.getElementById("eventContainer");
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const todayStr = now.toISOString().split("T")[0];
   document.getElementById("dayTitle").textContent = dayName;
   container.innerHTML = "";
+
+  const selected = document.getElementById("dayFilter")?.value || "today";
 
   const events = rows.map(([title, date, start, end]) => {
     return {
@@ -31,7 +33,16 @@ async function fetchEvents() {
       endTime: parseTime(date, end),
       date
     };
+  }).filter(e => {
+    if (selected === "all") return true;
+    if (selected === "today") return e.date === todayStr;
+    return e.date === selected;
   }).sort((a, b) => a.startTime - b.startTime);
+
+  if (events.length === 0) {
+    container.innerHTML = "<div class='row'>No events found.</div>";
+    return;
+  }
 
   events.forEach(({ title, startTime, endTime }) => {
     const row = document.createElement("div");
@@ -92,4 +103,5 @@ async function fetchEvents() {
   });
 }
 
+document.getElementById("dayFilter").addEventListener("change", fetchEvents);
 fetchEvents();
