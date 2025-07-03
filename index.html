@@ -80,19 +80,21 @@
     }
 
     .dropdown {
-      margin: 12px;
+      margin-bottom: 4px;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="title">Event Schedule</div>
-    <div class="dropdown">
-      <label for="daySelector">Select Day:</label>
-      <select id="daySelector"></select>
-    </div>
     <div class="row" style="font-weight: bold; border-bottom: none; margin-bottom: 4px;">
-      <div class="label">Event:</div>
+      <div class="label">
+        <div class="dropdown">
+          <label for="daySelector">Select Day:</label>
+          <select id="daySelector"></select>
+        </div>
+        Event:
+      </div>
       <div class="time">Status</div>
     </div>
     <div id="eventContainer"></div>
