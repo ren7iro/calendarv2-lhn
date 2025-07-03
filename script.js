@@ -19,9 +19,31 @@ async function fetchEvents(selected = "today") {
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
   const container = document.getElementById("eventContainer");
-  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-  document.getElementById("dayTitle").textContent = dayName;
+  const filterSelect = document.getElementById("dayFilter");
   container.innerHTML = "";
+
+  // Populate dropdown only once (on first load)
+  if (!filterSelect.dataset.built) {
+    const rawDates = [...new Set(rows.map(r => r[1]))].sort();
+    filterSelect.innerHTML = `
+      <option value="today">Today</option>
+      <option value="all">Show All</option>
+      ${rawDates.map(d => {
+        const [y, m, d2] = d.split("-");
+        return `<option value="${d}">${d2}:${m}:${y}</option>`;
+      }).join("")}
+    `;
+    filterSelect.dataset.built = "true";
+  }
+
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+  document.getElementById("dayTitle").textContent =
+    selected === "today"
+      ? dayName
+      : (() => {
+          const [y, m, d] = selected.split("-");
+          return `${d}:${m}:${y}`;
+        })();
 
   const events = rows.map(([title, date, start, end]) => {
     return {
