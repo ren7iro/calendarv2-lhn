@@ -1,4 +1,4 @@
-const csvURL = 'calendar_lhn_flattened.csv';
+const csvURL = 'calendar.csv';
 
 function formatTime(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -8,12 +8,6 @@ function parseTime(dateStr, timeStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hour, minute] = timeStr.split(':').map(Number);
   return new Date(year, month - 1, day, hour, minute);
-}
-
-function getDayName(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', { weekday: 'long' });
 }
 
 function getTodayStr() {
@@ -30,7 +24,7 @@ async function fetchEvents(selected = "today") {
   const res = await fetch(csvURL);
   const text = await res.text();
   const rows = text.trim().split("\n").map(r => r.split(','));
-  rows.shift(); // remove header
+  const headers = rows.shift(); // ["Title", "Day", "Date", "TimeStart", "TimeEnd"]
 
   const todayStr = getTodayStr();
   const tomorrowStr = getTomorrowStr();
@@ -38,46 +32,39 @@ async function fetchEvents(selected = "today") {
   const filterSelect = document.getElementById("dayFilter");
   container.innerHTML = "";
 
-  // Build dropdown only once
+  // Build dropdown once
   if (!filterSelect.dataset.built) {
-    const rawDates = [...new Set(rows.map(r => r[1]))].sort();
+    const rawDates = [...new Set(rows.map(r => r[2]))].sort();
 
-    // Include tomorrow if not present (optional preview)
     if (!rawDates.includes(tomorrowStr)) {
       rawDates.push(tomorrowStr);
     }
 
     filterSelect.innerHTML = `
       <option value="today">Today</option>
-      ${rawDates.map(d => {
-        const [y, m, d2] = d.split("-");
-        return `<option value="${d}">${d2}:${m}:${y}</option>`;
+      ${rawDates.map(date => {
+        const [y, m, d] = date.split("-");
+        return `<option value="${date}">${d}:${m}:${y}</option>`;
       }).join("")}
     `;
     filterSelect.dataset.built = "true";
   }
 
-  // Header = weekday
-  let headerLabel = "";
-  if (selected === "today") {
-    headerLabel = getDayName(todayStr);
-  } else {
-    headerLabel = getDayName(selected);
-  }
-  document.getElementById("dayTitle").textContent = headerLabel;
+  // Get selected date and find the label day from CSV
+  const filterDate = selected === "today" ? todayStr : selected;
+  const match = rows.find(r => r[2] === filterDate);
+  const labelDay = match ? match[1] : "(No Events)";
+  document.getElementById("dayTitle").textContent = labelDay;
 
-  // Filter events
-  const events = rows.map(([title, date, start, end]) => {
+  const events = rows.map(([title, day, date, start, end]) => {
     return {
       title,
       startTime: parseTime(date, start),
       endTime: parseTime(date, end),
       date
     };
-  }).filter(e => {
-    const filterDate = selected === "today" ? todayStr : selected;
-    return e.date === filterDate;
-  }).sort((a, b) => a.startTime - b.startTime);
+  }).filter(e => e.date === filterDate)
+    .sort((a, b) => a.startTime - b.startTime);
 
   if (events.length === 0) {
     container.innerHTML = "<div class='row'>No events found.</div>";
