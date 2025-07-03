@@ -30,6 +30,9 @@
       font-weight: 500;
       flex: 1;
     }
+    .ended .label {
+      text-decoration: line-through;
+    }
     .time {
       font-size: 13px;
       text-align: right;
@@ -113,12 +116,9 @@
       const container = document.getElementById("eventContainer");
       container.innerHTML = "";
 
-      console.log('[Parsed Events]', rows.map(([title, start, end]) => ({ title, start, end })));
-
       const events = rows.map(([title, startUTC, endUTC]) => {
         const startTime = new Date(startUTC);
         const endTime = new Date(endUTC);
-        console.log('Checking:', startTime.toLocaleString(), '| now:', now.toLocaleString());
         return { name: title, startTime, endTime };
       }).filter(({ startTime, endTime }) => {
         return (
@@ -148,6 +148,7 @@
           const isEnded = now > endTime;
 
           row.classList.remove("ongoing", "ended");
+          labelDiv.classList.remove("ended-title");
           if (isOngoing) row.classList.add("ongoing");
           if (isEnded) row.classList.add("ended");
 
@@ -156,36 +157,19 @@
             infoMsg.className = "info-msg info-ended";
           } else if (isOngoing) {
             const remaining = endTime - now;
-            const days = Math.floor(remaining / 86400000);
-            const hours = Math.floor((remaining % 86400000) / 3600000);
-            const minutes = Math.floor((remaining % 3600000) / 60000);
+            const minutes = Math.floor(remaining / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
-
-            let left = "";
-            if (days > 0) left += `${days}d `;
-            if (days > 0 || hours > 0) left += `${hours}h `;
-            if (days > 0 || hours > 0 || minutes > 0) left += `${minutes}m `;
-            left += `${seconds}s`;
-
-            infoMsg.textContent = `⏳ ${left.trim()} left`;
+            infoMsg.textContent = `⏳ ${minutes}m ${seconds}s left`;
             infoMsg.className = "info-msg info-ongoing";
           } else {
             const total = startTime - now;
-            const days = Math.floor(total / 86400000);
-            const hours = Math.floor((total % 86400000) / 3600000);
-            const minutes = Math.floor((total % 3600000) / 60000);
+            const minutes = Math.floor(total / 60000);
             const seconds = Math.floor((total % 60000) / 1000);
-
-            let countdown = "";
-            if (days > 0) countdown += `${days}d `;
-            if (days > 0 || hours > 0) countdown += `${hours}h `;
-            if (days > 0 || hours > 0 || minutes > 0) countdown += `${minutes}m `;
-            countdown += `${seconds}s`;
-
-            infoMsg.textContent = `🕒 ${formatTime(startTime)} (${countdown.trim()})`;
+            infoMsg.textContent = `🕒 ${formatTime(startTime)} (${minutes}m ${seconds}s)`;
             infoMsg.className = "info-msg info-upcoming";
           }
         };
+
         updateMsg();
 
         const interval = setInterval(() => {
