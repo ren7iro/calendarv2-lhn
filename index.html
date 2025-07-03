@@ -115,7 +115,9 @@
         const endTime = new Date(endUTC);
         return { name: title, startTime, endTime };
       }).filter(({ startTime }) => {
-        return startTime.toDateString() === now.toDateString();
+        const now = new Date();
+        const startLocal = new Date(startTime.getTime() + now.getTimezoneOffset() * 60000);
+        return startLocal.toDateString() === now.toDateString();
       }).sort((a, b) => a.startTime - b.startTime);
 
       events.forEach(({ name, startTime, endTime }) => {
