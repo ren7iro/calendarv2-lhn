@@ -31,8 +31,7 @@ async function fetchEvents() {
       endTime: parseTime(date, end),
       date
     };
-  })
-    .sort((a, b) => a.startTime - b.startTime);
+  }).sort((a, b) => a.startTime - b.startTime);
 
   events.forEach(({ title, startTime, endTime }) => {
     const row = document.createElement("div");
