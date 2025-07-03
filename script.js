@@ -10,6 +10,12 @@ function parseTime(dateStr, timeStr) {
   return new Date(year, month - 1, day, hour, minute);
 }
 
+function getDayName(yyyy_mm_dd) {
+  const [y, m, d] = yyyy_mm_dd.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
 async function fetchEvents(selected = "today") {
   const res = await fetch(csvURL);
   const text = await res.text();
@@ -22,7 +28,7 @@ async function fetchEvents(selected = "today") {
   const filterSelect = document.getElementById("dayFilter");
   container.innerHTML = "";
 
-  // Populate dropdown only once (on first load)
+  // Build dropdown once
   if (!filterSelect.dataset.built) {
     const rawDates = [...new Set(rows.map(r => r[1]))].sort();
     filterSelect.innerHTML = `
@@ -36,14 +42,12 @@ async function fetchEvents(selected = "today") {
     filterSelect.dataset.built = "true";
   }
 
-  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-  document.getElementById("dayTitle").textContent =
-    selected === "today"
-      ? dayName
-      : (() => {
-          const [y, m, d] = selected.split("-");
-          return `${d}:${m}:${y}`;
-        })();
+  // Update header title (always show day name)
+  let labelDay = getDayName(todayStr);
+  if (selected !== "today" && selected !== "all") {
+    labelDay = getDayName(selected);
+  }
+  document.getElementById("dayTitle").textContent = labelDay;
 
   const events = rows.map(([title, date, start, end]) => {
     return {
@@ -122,12 +126,12 @@ async function fetchEvents(selected = "today") {
   });
 }
 
-// Wait for DOM and set up filter listener
+// Wait for DOM and attach event
 window.addEventListener("DOMContentLoaded", () => {
   const filter = document.getElementById("dayFilter");
   filter.addEventListener("change", () => {
     fetchEvents(filter.value);
   });
 
-  fetchEvents(filter.value); // initial load
+  fetchEvents("today");
 });
