@@ -36,12 +36,10 @@ async function fetchEvents(selected = "today") {
   if (!filterSelect.dataset.built) {
     const rawDates = [...new Set(rows.map(r => r[2]))].sort();
 
-    if (!rawDates.includes(tomorrowStr)) {
-      rawDates.push(tomorrowStr);
-    }
-
+    // Add tomorrow explicitly as a selectable option
     filterSelect.innerHTML = `
       <option value="today">Today</option>
+      <option value="${tomorrowStr}">Tomorrow</option>
       ${rawDates.map(date => {
         const [y, m, d] = date.split("-");
         return `<option value="${date}">${d}:${m}:${y}</option>`;
@@ -50,7 +48,6 @@ async function fetchEvents(selected = "today") {
     filterSelect.dataset.built = "true";
   }
 
-  // Get selected date and find the label day from CSV
   const filterDate = selected === "today" ? todayStr : selected;
   const match = rows.find(r => r[2] === filterDate);
   const labelDay = match ? match[1] : "(No Events)";
