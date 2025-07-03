@@ -78,23 +78,13 @@
       text-decoration: line-through;
       color: #999;
     }
-
-    .dropdown {
-      margin-bottom: 4px;
-    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="title">Event Schedule</div>
+    <div class="title" id="dayTitle"></div>
     <div class="row" style="font-weight: bold; border-bottom: none; margin-bottom: 4px;">
-      <div class="label">
-        <div class="dropdown">
-          <label for="daySelector">Select Day:</label>
-          <select id="daySelector"></select>
-        </div>
-        Event:
-      </div>
+      <div class="label">Event:</div>
       <div class="time">Status</div>
     </div>
     <div id="eventContainer"></div>
@@ -110,50 +100,38 @@
     async function fetchEvents() {
       const res = await fetch(sheetURL);
       const text = await res.text();
-      const rows = text.trim().split("\n").map(r => r.split(',').map(col => col.trim()));
-      const header = rows.shift();
+      const rows = text.trim().split("\n").map(r => r.split(','));
+      rows.shift();
 
-      const events = rows.map(([title, startUTC, endUTC, duration]) => {
-        const start = new Date(startUTC);
-        const end = new Date(endUTC);
-        const weekday = start.toLocaleDateString('en-US', { weekday: 'long' });
-        return { title, start, end, duration: parseInt(duration), weekday };
-      });
-
-      const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const now = new Date();
-      const todayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      document.getElementById("dayTitle").textContent = dayName;
 
-      const selector = document.getElementById("daySelector");
-      selector.innerHTML = weekdays.map(day => `<option value="${day}" ${day === todayName ? 'selected' : ''}>${day}</option>`).join('');
-      selector.addEventListener('change', () => renderEvents(events));
-
-      renderEvents(events);
-    }
-
-    function renderEvents(events) {
-      const selectedDay = document.getElementById("daySelector").value;
       const container = document.getElementById("eventContainer");
       container.innerHTML = "";
 
-      const now = new Date();
+      const events = rows.map(([title, startUTC, endUTC]) => {
+        const startTime = new Date(startUTC);
+        const endTime = new Date(endUTC);
+        return { name: title, startTime, endTime };
+      }).filter(({ startTime }) => {
+        return startTime.toDateString() === now.toDateString();
+      }).sort((a, b) => a.startTime - b.startTime);
 
-      const dayEvents = events.filter(e => e.weekday === selectedDay).sort((a, b) => a.start - b.start);
-
-      dayEvents.forEach(({ title, start, end }) => {
+      events.forEach(({ name, startTime, endTime }) => {
         const row = document.createElement("div");
         row.className = "row";
 
-        const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }) === selectedDay;
-        const isOngoing = isToday && now >= start && now <= end;
-        const isEnded = isToday && now > end;
+        const now = new Date();
+        const isOngoing = now >= startTime && now <= endTime;
+        const isEnded = now > endTime;
 
         if (isOngoing) row.classList.add("ongoing");
         if (isEnded) row.classList.add("ended");
 
         const labelDiv = document.createElement("div");
         labelDiv.className = "label";
-        labelDiv.textContent = title;
+        labelDiv.textContent = name;
 
         const timeDiv = document.createElement("div");
         timeDiv.className = "time";
@@ -163,36 +141,47 @@
 
         const updateMsg = () => {
           const now = new Date();
-          if (!isToday) {
-            infoMsg.textContent = `🕒 ${formatTime(start)}`;
-            infoMsg.className = "info-msg info-upcoming";
-            return;
-          }
-
           if (isEnded) {
-            infoMsg.innerHTML = `✔️ <span class="ended-time">${formatTime(start)}–${formatTime(end)}</span>`;
+            infoMsg.innerHTML = `✔️ <span class="ended-time">${formatTime(startTime)}–${formatTime(endTime)}</span>`;
             infoMsg.className = "info-msg info-ended";
           } else if (isOngoing) {
-            const remaining = end - now;
+            const remaining = endTime - now;
+            const days = Math.floor(remaining / 86400000);
+            const hours = Math.floor((remaining % 86400000) / 3600000);
             const minutes = Math.floor((remaining % 3600000) / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
-            infoMsg.textContent = `⏳ ${minutes}m ${seconds}s left`;
+
+            let left = "";
+            if (days > 0) left += `${days}d `;
+            if (days > 0 || hours > 0) left += `${hours}h `;
+            if (days > 0 || hours > 0 || minutes > 0) left += `${minutes}m `;
+            left += `${seconds}s`;
+
+            infoMsg.textContent = `⏳ ${left.trim()} left`;
             infoMsg.className = "info-msg info-ongoing";
           } else {
-            const total = start - now;
+            const total = startTime - now;
+            const days = Math.floor(total / 86400000);
+            const hours = Math.floor((total % 86400000) / 3600000);
             const minutes = Math.floor((total % 3600000) / 60000);
             const seconds = Math.floor((total % 60000) / 1000);
-            infoMsg.textContent = `🕒 ${formatTime(start)} (${minutes}m ${seconds}s)`;
+
+            let countdown = "";
+            if (days > 0) countdown += `${days}d `;
+            if (days > 0 || hours > 0) countdown += `${hours}h `;
+            if (days > 0 || hours > 0 || minutes > 0) countdown += `${minutes}m `;
+            countdown += `${seconds}s`;
+
+            infoMsg.textContent = `🕒 ${formatTime(startTime)} (${countdown.trim()})`;
             infoMsg.className = "info-msg info-upcoming";
           }
         };
-
         updateMsg();
 
-        if (isToday && !isEnded) {
+        if (!isEnded) {
           const interval = setInterval(() => {
             updateMsg();
-            if (new Date() > end) {
+            if (new Date() > endTime) {
               clearInterval(interval);
               updateMsg();
             }
