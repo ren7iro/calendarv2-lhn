@@ -61,9 +61,12 @@
       const container = document.getElementById("eventContainer");
       container.innerHTML = "";
 
+      console.log('[Parsed Events]', rows.map(([title, start, end]) => ({ title, start, end })));
+
       const events = rows.map(([title, startUTC, endUTC]) => {
         const startTime = new Date(startUTC);
         const endTime = new Date(endUTC);
+        console.log('Checking:', startTime.toLocaleString(), '| now:', now.toLocaleString());
         return { name: title, startTime, endTime };
       }).filter(({ startTime, endTime }) => {
         return (
