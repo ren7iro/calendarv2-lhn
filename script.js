@@ -16,6 +16,10 @@ function getDayName(dateStr) {
   return date.toLocaleDateString('en-US', { weekday: 'long' });
 }
 
+function getTodayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
 function getTomorrowStr() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -28,25 +32,23 @@ async function fetchEvents(selected = "today") {
   const rows = text.trim().split("\n").map(r => r.split(','));
   rows.shift(); // remove header
 
-  const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = getTodayStr();
   const tomorrowStr = getTomorrowStr();
   const container = document.getElementById("eventContainer");
   const filterSelect = document.getElementById("dayFilter");
   container.innerHTML = "";
 
-  // Build dropdown once
+  // Build dropdown only once
   if (!filterSelect.dataset.built) {
     const rawDates = [...new Set(rows.map(r => r[1]))].sort();
 
-    // Add "tomorrow" manually if missing
+    // Include tomorrow if not present (optional preview)
     if (!rawDates.includes(tomorrowStr)) {
       rawDates.push(tomorrowStr);
     }
 
     filterSelect.innerHTML = `
       <option value="today">Today</option>
-      <option value="all">Show All</option>
       ${rawDates.map(d => {
         const [y, m, d2] = d.split("-");
         return `<option value="${d}">${d2}:${m}:${y}</option>`;
@@ -55,17 +57,16 @@ async function fetchEvents(selected = "today") {
     filterSelect.dataset.built = "true";
   }
 
-  // Set header label: show day name (not raw date)
-  let headerLabel = "Unknown";
+  // Header = weekday
+  let headerLabel = "";
   if (selected === "today") {
     headerLabel = getDayName(todayStr);
-  } else if (selected === "all") {
-    headerLabel = "All Events";
   } else {
     headerLabel = getDayName(selected);
   }
   document.getElementById("dayTitle").textContent = headerLabel;
 
+  // Filter events
   const events = rows.map(([title, date, start, end]) => {
     return {
       title,
@@ -74,9 +75,8 @@ async function fetchEvents(selected = "today") {
       date
     };
   }).filter(e => {
-    if (selected === "all") return true;
-    if (selected === "today") return e.date === todayStr;
-    return e.date === selected;
+    const filterDate = selected === "today" ? todayStr : selected;
+    return e.date === filterDate;
   }).sort((a, b) => a.startTime - b.startTime);
 
   if (events.length === 0) {
