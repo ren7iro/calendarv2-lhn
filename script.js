@@ -31,7 +31,7 @@ async function fetchEvents() {
       endTime: parseTime(date, end),
       date
     };
-  }).filter(e => e.date === todayStr)
+  })
     .sort((a, b) => a.startTime - b.startTime);
 
   events.forEach(({ title, startTime, endTime }) => {
