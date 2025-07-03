@@ -131,7 +131,7 @@
       events.sort((a, b) => {
         const aLocal = new Date(a.startTime.getTime());
         const bLocal = new Date(b.startTime.getTime());
-        return aLocal.getHours() * 60 + aLocal.getMinutes() - (bLocal.getHours() * 60 + bLocal.getMinutes());
+        return aLocal.getTime() - bLocal.getTime();
       });
 
       events.forEach(({ name, startTime, endTime }) => {
