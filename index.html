@@ -4,7 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>calendar | lhn</title>
-  <style>/* ...unchanged styles... */</style>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+    }
+    .wrap {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #ccc;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .label {
+      font-weight: 500;
+      flex: 1;
+    }
+    .time {
+      font-size: 13px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .ongoing .time {
+      color: red;
+    }
+    .ended .time {
+      color: gray;
+    }
+    .info-msg {
+      font-style: italic;
+    }
+    .info-ended {
+      color: gray;
+    }
+    .info-ongoing {
+      color: red;
+    }
+    .info-upcoming {
+      color: black;
+    }
+    .ended-time {
+      text-decoration: none;
+    }
+  </style>
 </head>
 <body>
   <div class="wrap">
