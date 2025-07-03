@@ -128,7 +128,11 @@
         );
       });
 
-      events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      events.sort((a, b) => {
+        const aLocal = new Date(a.startTime.getTime());
+        const bLocal = new Date(b.startTime.getTime());
+        return aLocal.getHours() * 60 + aLocal.getMinutes() - (bLocal.getHours() * 60 + bLocal.getMinutes());
+      });
 
       events.forEach(({ name, startTime, endTime }) => {
         const row = document.createElement("div");
