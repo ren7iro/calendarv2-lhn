@@ -100,16 +100,17 @@
       });
     }
 
-    function isSameLocalDay(d1, d2) {
-      return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-    }
-
     async function fetchEvents() {
       const res = await fetch(sheetURL);
       const text = await res.text();
       const rows = parseCSV(text);
 
       const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date(now);
+      endOfToday.setHours(23, 59, 59, 999);
+
       const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
       document.getElementById("dayTitle").textContent = dayName;
 
@@ -121,18 +122,10 @@
         const endTime = new Date(endUTC);
         return { name: title, startTime, endTime };
       }).filter(({ startTime, endTime }) => {
-        return (
-          isSameLocalDay(startTime, now) ||
-          isSameLocalDay(endTime, now) ||
-          (startTime <= now && endTime >= now)
-        );
+        return endTime >= startOfToday && startTime <= endOfToday;
       });
 
-      events.sort((a, b) => {
-        const aLocal = new Date(a.startTime.getTime());
-        const bLocal = new Date(b.startTime.getTime());
-        return aLocal.getTime() - bLocal.getTime();
-      });
+      events.sort((a, b) => a.startTime - b.startTime);
 
       events.forEach(({ name, startTime, endTime }) => {
         const row = document.createElement("div");
