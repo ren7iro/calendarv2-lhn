@@ -132,13 +132,6 @@
         const row = document.createElement("div");
         row.className = "row";
 
-        const now = new Date();
-        const isOngoing = now >= startTime && now <= endTime;
-        const isEnded = now > endTime;
-
-        if (isOngoing) row.classList.add("ongoing");
-        if (isEnded) row.classList.add("ended");
-
         const labelDiv = document.createElement("div");
         labelDiv.className = "label";
         labelDiv.textContent = name;
@@ -151,6 +144,13 @@
 
         const updateMsg = () => {
           const now = new Date();
+          const isOngoing = now >= startTime && now <= endTime;
+          const isEnded = now > endTime;
+
+          row.classList.remove("ongoing", "ended");
+          if (isOngoing) row.classList.add("ongoing");
+          if (isEnded) row.classList.add("ended");
+
           if (isEnded) {
             infoMsg.innerHTML = `✔️ <span class="ended-time">${formatTime(startTime)}–${formatTime(endTime)}</span>`;
             infoMsg.className = "info-msg info-ended";
@@ -188,15 +188,13 @@
         };
         updateMsg();
 
-        if (!isEnded) {
-          const interval = setInterval(() => {
+        const interval = setInterval(() => {
+          updateMsg();
+          if (new Date() > endTime) {
+            clearInterval(interval);
             updateMsg();
-            if (new Date() > endTime) {
-              clearInterval(interval);
-              updateMsg();
-            }
-          }, 1000);
-        }
+          }
+        }, 1000);
 
         timeDiv.appendChild(infoMsg);
         row.appendChild(labelDiv);
