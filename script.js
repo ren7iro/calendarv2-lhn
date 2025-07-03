@@ -10,10 +10,16 @@ function parseTime(dateStr, timeStr) {
   return new Date(year, month - 1, day, hour, minute);
 }
 
-function getDayName(yyyy_mm_dd) {
-  const [y, m, d] = yyyy_mm_dd.split('-').map(Number);
+function getDayName(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+function getTomorrowStr() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split("T")[0];
 }
 
 async function fetchEvents(selected = "today") {
@@ -24,6 +30,7 @@ async function fetchEvents(selected = "today") {
 
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
+  const tomorrowStr = getTomorrowStr();
   const container = document.getElementById("eventContainer");
   const filterSelect = document.getElementById("dayFilter");
   container.innerHTML = "";
@@ -31,6 +38,12 @@ async function fetchEvents(selected = "today") {
   // Build dropdown once
   if (!filterSelect.dataset.built) {
     const rawDates = [...new Set(rows.map(r => r[1]))].sort();
+
+    // Add "tomorrow" manually if missing
+    if (!rawDates.includes(tomorrowStr)) {
+      rawDates.push(tomorrowStr);
+    }
+
     filterSelect.innerHTML = `
       <option value="today">Today</option>
       <option value="all">Show All</option>
@@ -42,12 +55,16 @@ async function fetchEvents(selected = "today") {
     filterSelect.dataset.built = "true";
   }
 
-  // Update header title (always show day name)
-  let labelDay = getDayName(todayStr);
-  if (selected !== "today" && selected !== "all") {
-    labelDay = getDayName(selected);
+  // Set header label: show day name (not raw date)
+  let headerLabel = "Unknown";
+  if (selected === "today") {
+    headerLabel = getDayName(todayStr);
+  } else if (selected === "all") {
+    headerLabel = "All Events";
+  } else {
+    headerLabel = getDayName(selected);
   }
-  document.getElementById("dayTitle").textContent = labelDay;
+  document.getElementById("dayTitle").textContent = headerLabel;
 
   const events = rows.map(([title, date, start, end]) => {
     return {
@@ -126,7 +143,7 @@ async function fetchEvents(selected = "today") {
   });
 }
 
-// Wait for DOM and attach event
+// DOM ready
 window.addEventListener("DOMContentLoaded", () => {
   const filter = document.getElementById("dayFilter");
   filter.addEventListener("change", () => {
