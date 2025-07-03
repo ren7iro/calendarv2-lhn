@@ -101,7 +101,7 @@
     }
 
     function isSameLocalDay(d1, d2) {
-      return d1.toLocaleDateString() === d2.toLocaleDateString();
+      return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
     }
 
     async function fetchEvents() {
@@ -126,7 +126,9 @@
           isSameLocalDay(endTime, now) ||
           (startTime <= now && endTime >= now)
         );
-      }).sort((a, b) => a.startTime - b.startTime);
+      });
+
+      events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
       events.forEach(({ name, startTime, endTime }) => {
         const row = document.createElement("div");
@@ -148,7 +150,6 @@
           const isEnded = now > endTime;
 
           row.classList.remove("ongoing", "ended");
-          labelDiv.classList.remove("ended-title");
           if (isOngoing) row.classList.add("ongoing");
           if (isEnded) row.classList.add("ended");
 
