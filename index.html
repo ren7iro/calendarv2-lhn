@@ -2,22 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>calendarv2 | lhn</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar LHN</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background: #f4f4f4;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .event {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .ended {
+      color: gray;
+    }
+
+    .ongoing {
+      color: red;
+      font-weight: bold;
+    }
+
+    .upcoming {
+      color: black;
+    }
+
+    .info-msg {
+      font-style: italic;
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="title">
-  <span id="dayTitle"></span>
- <select id="dayFilter" style="float:right;"></select>
-</div>
-    <div class="row" style="font-weight: bold; border-bottom: none; margin-bottom: 4px;">
-      <div class="label">Event:</div>
-      <div class="time">Status</div>
-    </div>
-    <div id="eventContainer"></div>
-  </div>
-  <script src="script.js"></script>
+  <h1>Calendar LHN</h1>
+  <div id="events"></div>
+
+  <script>
+    const csvURL = 'calendar.csv';
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',');
+      return lines.slice(1).map(line => {
+        const values = line.split(',');
+        const entry = {};
+        headers.forEach((h, i) => {
+          entry[h.trim()] = values[i].trim();
+        });
+        return entry;
+      });
+    }
+
+    function formatTimeDiff(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}m ${seconds}s`;
+    }
+
+    function updateEvents(events) {
+      const container = document.getElementById('events');
+      container.innerHTML = '';
+
+      const now = new Date();
+
+      events.forEach(event => {
+        const start = new Date(`${event.Date}T${event.TimeStart}`);
+        const end = new Date(`${event.Date}T${event.TimeEnd}`);
+        const div = document.createElement('div');
+        div.className = 'event';
+
+        const title = document.createElement('h3');
+        title.textContent = event.Title;
+
+        const timeInfo = document.createElement('div');
+        const timeDiff = start - now;
+
+        if (now > end) {
+          div.classList.add('ended');
+          timeInfo.innerHTML = '✔️ Event telah berakhir';
+        } else if (now >= start && now <= end) {
+          div.classList.add('ongoing');
+          timeInfo.innerHTML = `⏳ Sedang berlangsung (sisa ${formatTimeDiff(end - now)})`;
+        } else {
+          div.classList.add('upcoming');
+          const time = start.toTimeString().slice(0, 5);
+          timeInfo.innerHTML = `🕒 ${time} (dalam ${formatTimeDiff(timeDiff)})`;
+        }
+
+        div.appendChild(title);
+        div.appendChild(timeInfo);
+        container.appendChild(div);
+      });
+    }
+
+    fetch(csvURL)
+      .then(res => res.text())
+      .then(text => {
+        const data = parseCSV(text);
+        updateEvents(data);
+      })
+      .catch(err => {
+        document.getElementById('events').innerHTML = `<div class="info-msg ended">Gagal memuat data: ${err}</div>`;
+      });
+  </script>
 </body>
 </html>
