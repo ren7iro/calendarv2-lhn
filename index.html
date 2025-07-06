@@ -51,15 +51,18 @@
       const duration = parseDuration(durationStr);
       const eventDayIndex = days.indexOf(dayName);
 
-      const now = new Date();
-      const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-      const tzDayIndex = tzDate.getDay();
-      const delta = (eventDayIndex - tzDayIndex + 7) % 7;
-      tzDate.setDate(tzDate.getDate() + delta);
-      tzDate.setHours(h, m, 0, 0);
+      // Use a fixed anchor: Monday, Jan 1, 2024 in specified timezone
+      const anchorBase = new Date(Date.UTC(2024, 0, 1));
+      const baseLocalStr = anchorBase.toLocaleString('en-US', { timeZone: timezone });
+      const baseDate = new Date(baseLocalStr);
+      const baseDayIndex = baseDate.getDay();
+      const deltaDays = (eventDayIndex - baseDayIndex + 7) % 7;
 
-      const utcDate = new Date(tzDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const startUTC = new Date(utcDate);
+      baseDate.setDate(baseDate.getDate() + deltaDays);
+      baseDate.setHours(h, m, 0, 0);
+
+      const utcStr = baseDate.toLocaleString('en-US', { timeZone: 'UTC' });
+      const startUTC = new Date(utcStr);
       const endUTC = new Date(startUTC.getTime() + duration);
 
       return { startUTC, endUTC };
