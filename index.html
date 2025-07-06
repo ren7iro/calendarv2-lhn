@@ -73,7 +73,10 @@
       const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-      return endUTC >= localStart && startUTC <= localEnd;
+      const startLocal = new Date(startUTC.getTime() + (new Date().getTimezoneOffset() * -60000));
+      const endLocal = new Date(endUTC.getTime() + (new Date().getTimezoneOffset() * -60000));
+
+      return endLocal >= localStart && startLocal <= localEnd;
     }
 
     function formatTime(date) {
