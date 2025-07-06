@@ -32,6 +32,7 @@
 
   <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpnITvpE0albCG_WHe1qoQhXzzSXOvQQxUiA8GAXJYCfY4N4ttDDKiyAPoKNjauq0IU1GqN1uD4PSR/pub?output=csv';
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
     async function fetchCSV(url) {
       const res = await fetch(url);
@@ -48,15 +49,20 @@
     function parseEventUTC(dayName, timeStr, durationStr) {
       const [h, m] = timeStr.split(':').map(Number);
       const duration = parseDuration(durationStr);
+      const wibOffset = 7 * 60; // WIB = UTC+7 in minutes
 
-      const dayIndex = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].indexOf(dayName);
+      // get "Monday, 02:00" in WIB = the anchor reference
+      const anchorDate = new Date(Date.UTC(2024, 0, 1, 19, 0)); // 2024-01-01 02:00 WIB == 2023-12-31 19:00 UTC
+      const anchorDayIndex = 1; // Monday
 
-      const now = new Date();
-      const todayIndex = now.getDay();
-      const delta = (dayIndex - todayIndex + 7) % 7;
-      const eventWIB = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + delta, h - 7, m, 0));
+      const eventDayIndex = days.indexOf(dayName);
+      const dayDiff = (eventDayIndex - anchorDayIndex + 7) % 7;
 
-      const startUTC = eventWIB;
+      const eventWIB = new Date(anchorDate.getTime());
+      eventWIB.setUTCDate(eventWIB.getUTCDate() + dayDiff);
+      eventWIB.setUTCHours(h - 7, m, 0, 0); // WIB to UTC
+
+      const startUTC = new Date(eventWIB);
       const endUTC = new Date(startUTC.getTime() + duration);
 
       return { startUTC, endUTC };
@@ -67,10 +73,7 @@
       const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-      const startBoundary = new Date(localStart.getTime() - localStart.getTimezoneOffset() * 60000);
-      const endBoundary = new Date(localEnd.getTime() - localEnd.getTimezoneOffset() * 60000);
-
-      return endUTC >= startBoundary && startUTC <= endBoundary;
+      return endUTC >= localStart && startUTC <= localEnd;
     }
 
     function formatTime(date) {
