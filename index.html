@@ -46,23 +46,20 @@
       return 0;
     }
 
-    function parseEventUTC(dayName, timeStr, durationStr) {
+    function parseEventUTC(dayName, timeStr, durationStr, timezone) {
       const [h, m] = timeStr.split(':').map(Number);
       const duration = parseDuration(durationStr);
-      const wibOffset = 7 * 60; // WIB = UTC+7 in minutes
-
-      // get "Monday, 02:00" in WIB = the anchor reference
-      const anchorDate = new Date(Date.UTC(2024, 0, 1, 19, 0)); // 2024-01-01 02:00 WIB == 2023-12-31 19:00 UTC
-      const anchorDayIndex = 1; // Monday
-
       const eventDayIndex = days.indexOf(dayName);
-      const dayDiff = (eventDayIndex - anchorDayIndex + 7) % 7;
 
-      const eventWIB = new Date(anchorDate.getTime());
-      eventWIB.setUTCDate(eventWIB.getUTCDate() + dayDiff);
-      eventWIB.setUTCHours(h - 7, m, 0, 0); // WIB to UTC
+      const now = new Date();
+      const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const tzDayIndex = tzDate.getDay();
+      const delta = (eventDayIndex - tzDayIndex + 7) % 7;
+      tzDate.setDate(tzDate.getDate() + delta);
+      tzDate.setHours(h, m, 0, 0);
 
-      const startUTC = new Date(eventWIB);
+      const utcDate = new Date(tzDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const startUTC = new Date(utcDate);
       const endUTC = new Date(startUTC.getTime() + duration);
 
       return { startUTC, endUTC };
@@ -90,13 +87,14 @@
     async function loadEvents() {
       const rows = await fetchCSV(csvUrl);
       const headers = rows[0];
-      const events = rows.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h.trim(), row[i].trim()])));
+      const events = rows.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h.trim(), row[i]?.trim() || ''])));
 
       const container = document.getElementById('event-list');
       container.innerHTML = '';
 
       const todayEvents = events.filter(e => {
-        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration);
+        const tz = e.timezone || 'Asia/Jakarta';
+        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration, tz);
         return isEventInLocalToday(startUTC, endUTC);
       });
 
@@ -106,7 +104,8 @@
       }
 
       todayEvents.forEach(e => {
-        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration);
+        const tz = e.timezone || 'Asia/Jakarta';
+        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration, tz);
 
         const eventDiv = document.createElement('div');
         eventDiv.className = 'event';
