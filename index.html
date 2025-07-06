@@ -32,7 +32,6 @@
 
   <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpnITvpE0albCG_WHe1qoQhXzzSXOvQQxUiA8GAXJYCfY4N4ttDDKiyAPoKNjauq0IU1GqN1uD4PSR/pub?output=csv';
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
     async function fetchCSV(url) {
       const res = await fetch(url);
@@ -46,75 +45,48 @@
       return 0;
     }
 
-    function parseEventUTC(dayName, timeStr, durationStr, timezone) {
-      const [h, m] = timeStr.split(':').map(Number);
-      const duration = parseDuration(durationStr);
-      const eventDayIndex = days.indexOf(dayName);
+    function convertWIBtoLocalTime(hourStr, durationStr) {
+      const [h, m] = hourStr.split(":").map(Number);
+      const now = new Date();
+      const localDay = now.getDay();
 
-      // Use a fixed anchor: Monday, Jan 1, 2024 in specified timezone
-      const anchorBase = new Date(Date.UTC(2024, 0, 1));
-      const baseLocalStr = anchorBase.toLocaleString('en-US', { timeZone: timezone });
-      const baseDate = new Date(baseLocalStr);
-      const baseDayIndex = baseDate.getDay();
-      const deltaDays = (eventDayIndex - baseDayIndex + 7) % 7;
-
-      baseDate.setDate(baseDate.getDate() + deltaDays);
-      baseDate.setHours(h, m, 0, 0);
-
-      const utcStr = baseDate.toLocaleString('en-US', { timeZone: 'UTC' });
-      const startUTC = new Date(utcStr);
-      const endUTC = new Date(startUTC.getTime() + duration);
-
-      return { startUTC, endUTC };
+      // Build a date in WIB (UTC+7)
+      const wibDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), h - 7, m, 0));
+      return wibDate;
     }
 
-    function isEventInLocalToday(startUTC, endUTC) {
-      const now = new Date();
-      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-      const startLocal = new Date(startUTC.getTime() + (new Date().getTimezoneOffset() * -60000));
-      const endLocal = new Date(endUTC.getTime() + (new Date().getTimezoneOffset() * -60000));
-
-      return endLocal >= localStart && startLocal <= localEnd;
+    function getLocalDayName() {
+      return new Date().toLocaleDateString('en-US', { weekday: 'long' });
     }
 
     function formatTime(date) {
-      return date.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
     async function loadEvents() {
       const rows = await fetchCSV(csvUrl);
       const headers = rows[0];
-      const events = rows.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h.trim(), row[i]?.trim() || ''])));
+      const events = rows.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h.trim(), row[i].trim()])));
 
+      const todayName = getLocalDayName();
       const container = document.getElementById('event-list');
       container.innerHTML = '';
 
-      const todayEvents = events.filter(e => {
-        const tz = e.timezone || 'Asia/Jakarta';
-        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration, tz);
-        return isEventInLocalToday(startUTC, endUTC);
-      });
-
+      const todayEvents = events.filter(e => e.day === todayName);
       if (todayEvents.length === 0) {
         container.textContent = 'No events today.';
         return;
       }
 
       todayEvents.forEach(e => {
-        const tz = e.timezone || 'Asia/Jakarta';
-        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration, tz);
+        const start = convertWIBtoLocalTime(e.start, e.duration);
+        const end = new Date(start.getTime() + parseDuration(e.duration));
 
         const eventDiv = document.createElement('div');
         eventDiv.className = 'event';
         eventDiv.innerHTML = `
           <div class="name">${e.name}</div>
-          <div class="time">${formatTime(startUTC)} - ${formatTime(endUTC)}</div>
+          <div class="time">${formatTime(start)} - ${formatTime(end)}</div>
         `;
         container.appendChild(eventDiv);
       });
