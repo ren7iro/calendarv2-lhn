@@ -45,22 +45,40 @@
       return 0;
     }
 
-    function convertWIBtoLocalTime(hourStr, durationStr) {
-      const [h, m] = hourStr.split(":").map(Number);
-      const now = new Date();
-      const localDay = now.getDay();
+    function parseEventUTC(dayName, timeStr, durationStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const duration = parseDuration(durationStr);
 
-      // Build a date in WIB (UTC+7)
-      const wibDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), h - 7, m, 0));
-      return wibDate;
+      const dayIndex = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].indexOf(dayName);
+
+      const now = new Date();
+      const todayIndex = now.getDay();
+      const delta = (dayIndex - todayIndex + 7) % 7;
+      const eventWIB = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + delta, h - 7, m, 0));
+
+      const startUTC = eventWIB;
+      const endUTC = new Date(startUTC.getTime() + duration);
+
+      return { startUTC, endUTC };
     }
 
-    function getLocalDayName() {
-      return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    function isEventInLocalToday(startUTC, endUTC) {
+      const now = new Date();
+      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      const startBoundary = new Date(localStart.getTime() - localStart.getTimezoneOffset() * 60000);
+      const endBoundary = new Date(localEnd.getTime() - localEnd.getTimezoneOffset() * 60000);
+
+      return endUTC >= startBoundary && startUTC <= endBoundary;
     }
 
     function formatTime(date) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
     }
 
     async function loadEvents() {
@@ -68,25 +86,27 @@
       const headers = rows[0];
       const events = rows.slice(1).map(row => Object.fromEntries(headers.map((h, i) => [h.trim(), row[i].trim()])));
 
-      const todayName = getLocalDayName();
       const container = document.getElementById('event-list');
       container.innerHTML = '';
 
-      const todayEvents = events.filter(e => e.day === todayName);
+      const todayEvents = events.filter(e => {
+        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration);
+        return isEventInLocalToday(startUTC, endUTC);
+      });
+
       if (todayEvents.length === 0) {
         container.textContent = 'No events today.';
         return;
       }
 
       todayEvents.forEach(e => {
-        const start = convertWIBtoLocalTime(e.start, e.duration);
-        const end = new Date(start.getTime() + parseDuration(e.duration));
+        const { startUTC, endUTC } = parseEventUTC(e.day, e.start, e.duration);
 
         const eventDiv = document.createElement('div');
         eventDiv.className = 'event';
         eventDiv.innerHTML = `
           <div class="name">${e.name}</div>
-          <div class="time">${formatTime(start)} - ${formatTime(end)}</div>
+          <div class="time">${formatTime(startUTC)} - ${formatTime(endUTC)}</div>
         `;
         container.appendChild(eventDiv);
       });
